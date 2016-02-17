@@ -1,0 +1,47 @@
+# Redirect to https
+server {
+   listen         80;
+   server_name localhost;
+
+   # Redirect to https (optional)
+   return 301 https://localhost$request_uri;
+}
+
+server {
+    client_max_body_size 5M;
+    listen 443 deferred spdy ssl;
+    listen [::]:443 deferred ssl spdy ipv6only=on;
+    server_name localhost;
+
+    # SSL certificates
+    ssl_certificate     /ssl/server.crt;
+    ssl_certificate_key /ssl/server.key;
+
+    # SSL settings
+    ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
+    add_header Strict-Transport-Security max-age=31536000;
+    ssl_ciphers ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS;
+
+    # Documents directory
+    root /www;
+    index index.php index.html index.htm;
+
+    # Deny all attempts to access hidden files such as .htaccess, .htpasswd, .DS_Store (Mac).
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    # Specifically matches URIs ending in .php
+    location ~ \.php$ {
+        try_files $uri = 404;
+        fastcgi_read_timeout 180;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        include fastcgi_params;
+        fastcgi_param  PATH_INFO        $fastcgi_path_info;
+        fastcgi_index index.php;
+        fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+        fastcgi_pass   unix:/var/run/php/php7.0-fpm.sock;
+    }
+}
